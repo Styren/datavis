@@ -1,3 +1,63 @@
+svg {
+  font: 10px sans-serif;
+}
+
+.background path {
+  fill: none;
+  stroke: #ddd;
+  shape-rendering: crispEdges;
+}
+
+.foreground path {
+  fill: none;
+}
+
+.brush .extent {
+  fill-opacity: .3;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}
+
+.axis line,
+.axis path {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+  cursor: move;
+}
+figure {
+display: inline-block;
+margin: 20px; /* adjust as needed */
+}
+
+figure img {
+vertical-align: top;
+}
+
+.focused {
+   border:1px solid #021a40;
+}
+
+figure figcaption {
+text-align: center;
+}
+
+label > input{ /* HIDE RADIO */
+  visibility: hidden; /* Makes input not-clickable */
+  position: absolute; /* Remove input from document flow */
+}
+label > input + img{ /* IMAGE STYLES */
+  cursor:pointer;
+  border:2px solid transparent;
+}
+label > input:checked + img{ /* (RADIO CHECKED) IMAGE STYLES */
+  border:2px solid #000981;
+}
+
 .background {
   fill: none;
   /*fill: rgb(239, 237, 245);*/
@@ -15,4 +75,108 @@
 #states .active {
   /*fill: lightblue;*/
   fill: rgb(117, 107, 177);
+}
+
+@import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+body {
+  font-family: "Helvetica Neue";
+  margin: 40px auto;
+}
+#body {
+  position: relative;
+}
+footer {
+  padding: 2em 0 1em 0;
+  font-size: 12px;
+}
+h1 {
+  font-size: 96px;
+  margin-top: .3em;
+  margin-bottom: 0;
+}
+h1 + h2 {
+  margin-top: 0;
+}
+h2 {
+  font-weight: 400;
+  font-size: 28px;
+}
+h1, h2 {
+  font-family: "Yanone Kaffeesatz";
+  text-rendering: optimizeLegibility;
+}
+#body > p {
+  line-height: 1.5em;
+  width: 640px;
+  text-rendering: optimizeLegibility;
+}
+#charts {
+}
+.chart {
+  display: inline-block;
+}
+.reset {
+  padding-left: 1em;
+  font-size: smaller;
+  color: #ccc;
+}
+.background.bar {
+  fill: #ccc;
+}
+.foreground.bar {
+  fill: #000981;
+}
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.axis text {
+  font: 10px sans-serif;
+}
+.brush rect.extent {
+  fill: #000981;
+  fill-opacity: .125;
+}
+.brush .resize path {
+  fill: #eee;
+  stroke: #666;
+}
+aside {
+  position: absolute;
+  left: 740px;
+  font-size: smaller;
+  width: 220px;
+}
+
+hr {
+  color: #000981;
+  margin: auto;
+  width: 70%;
+}
+
+#topStruct {
+	display: flex;
+	margin: 0 14%; 
+	width: 100%;
+}
+
+#middleStruct {
+	display: flex;
+	margin: 0 16%; 
+	width: 100%;
+}
+#bottomStruct {
+	display: flex;
+	margin: 0 15%; 
+	width: 100%;
+}
+#leftStruct {
+	width: 500px;
+	/* Just so it's visible */
+}
+#centerStruct {
+	flex: 1;
+	/* Grow to rest of container */
+	/* Just so it's visible */
 }
