@@ -24,6 +24,7 @@ var NUM_STATES = 16
 
 var carPerState = [];
 var maxCarsInState = 0;
+var maxCarsWithConfig = autos.length;
 
 var currState = null;
 var currCarType = 'all';
@@ -33,8 +34,13 @@ var currAttr = [[0, 100000000],
 	[0, 100000000],
 	[0, 100000000]
 	];
+var pieData = null;
+
 var calcCarPerState = () => {
 	carPerState = Array.apply(null, Array(NUM_STATES + 1)).map(Number.prototype.valueOf,0);
+    var res = {};
+    pieData = [];
+    maxCarsWithConfig = 0;
     if (currCarType == 'all') {
         for (var i = 0; i < autos.length; ++i) {
 			var ok = true;
@@ -42,8 +48,15 @@ var calcCarPerState = () => {
 				if (autos[i][currAttrF[j]] < currAttr[j][0] || autos[i][currAttrF[j]] > currAttr[j][1])
 					ok = false;
 			}
-			if (ok)
+			if (ok) {
 				++carPerState[autos[i].state];
+                if (!currState || currState == autos[i].state) {
+                    if (res[autos[i].brand] == null)
+                        res[autos[i].brand] = 0;
+                    ++res[autos[i].brand];
+                    ++maxCarsWithConfig;
+                }
+            }
         }
         maxCarsInState = Math.max.apply(null, carPerState);
     } else {
@@ -54,12 +67,30 @@ var calcCarPerState = () => {
 					if (autos[i][currAttrF[j]] < currAttr[j][0] || autos[i][currAttrF[j]] > currAttr[j][1])
 						ok = false;
 				}
-				if (ok)
-					++carPerState[autos[i].state];
+				if (ok) {
+                    ++carPerState[autos[i].state];
+                    if (!currState || currState == autos[i].state) {
+                        if (res[autos[i].brand] == null)
+                            res[autos[i].brand] = 0;
+                        ++res[autos[i].brand];
+                        ++maxCarsWithConfig;
+                    }
+                }
 			}
         }
         maxCarsInState = Math.max.apply(null, carPerState);
     }
+    var cutoff = maxCarsWithConfig / 100;
+    var other = 0;
+    for (var key in res) {
+        if (res.hasOwnProperty(key)) {
+            if (res[key] < cutoff)
+                other += res[key];
+            else
+                pieData.push({brand: key, value: res[key]})
+        }
+    }
+    pieData.push({brand: "other", value: other})
 }
 
 calcCarPerState();
@@ -328,6 +359,7 @@ d3.json("data.json", function(error, data) {
 					currAttr[id][0] = extent[0];
 					currAttr[id][1] = extent[1];
 					redrawMap();
+					redrawPie();
 					});
 			brush.on("brushend.chart", function() {
 					if (brush.empty()) {
@@ -422,6 +454,8 @@ d3.json("data.json", function(error, data) {
 					return currState == d;
 			})
 			renderAll();
+            calcCarPerState();
+            redrawPie();
 		}
 
 		function clickText(d) {
@@ -442,13 +476,15 @@ d3.json("data.json", function(error, data) {
 					return currState == d;
 					})
 			renderAll();
+            calcCarPerState();
+            redrawPie();
 		}
-var bwidth = 960,
-    bheight = 500,
+var bwidth = 900,
+    bheight = 900,
     radius = Math.min(bwidth, bheight) / 2;
 
-var color = d3.scale.ordinal()
-    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+var color = d3.scale.category20c()
+    //.range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
 var arc = d3.svg.arc()
     .outerRadius(radius - 10)
@@ -460,7 +496,7 @@ var labelArc = d3.svg.arc()
 
 var pie = d3.layout.pie()
     .sort(null)
-    .value(function(d) { return d.population; });
+    .value(function(d) { return d.value; });
 
 var bsvg = d3.select("#pie").append("svg")
     .attr("width", bwidth)
@@ -471,37 +507,55 @@ var bsvg = d3.select("#pie").append("svg")
   if (error) throw error;
 
   var g = bsvg.selectAll(".arc")
-      .data(pie(data))
+      .data(pie(pieData))
     .enter().append("g")
       .attr("class", "arc");
-
   g.append("path")
       .attr("d", arc)
-      .style("fill", function(d) { return color(1000); });
+      .style("fill", function(d) {  return color(d.data.value); });
 
   g.append("text")
       .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
       .attr("dy", ".35em")
-      .text(function(d) { return ';)'; });
+      .text(function(d) { return d.data.brand; });
+  g.append("text")
+      .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+      .attr("dy", "1.55em")
+      .text(function(d) { return Math.round(100 * d.data.value / data.length) + "%"; });
 
-function type(d) {
-  d.population = +d.population;
-  return d;
-}
+  var redrawPie = () => {
+      var bsvg = d3.select("#pie");
+      bsvg.selectAll(".arc").remove();
+      var g = bsvg.select("g").selectAll(".arc")
+          .data(pie(pieData))
+          .enter().append("g")
+          .attr("class", "arc");
+      g.append("path")
+          .attr("d", arc)
+          .style("fill", function(d) { return color(d.data.value); });
 
-});
+      g.append("text")
+          .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+          .attr("dy", ".35em")
+          .text(function(d) { return d.data.brand; });
+      g.append("text")
+          .attr("transform", function(d) { return "translate(" + labelArc.centroid(d) + ")"; })
+          .attr("dy", "1.55em")
+          .text(function(d) { return Math.round(100 * d.data.value / maxCarsWithConfig) + "%"; });
+  }
 
 var redrawMap = () => {
-	calcCarPerState();
-	d3.json("./dataBundesLander.json", function(collection) {
-	map.selectAll("path")
+    calcCarPerState();
+    d3.json("./dataBundesLander.json", function(collection) {
+            map.selectAll("path")
 		.style("fill", (x) => {return d3.rgb(0.0, 120 * carPerState[x.properties.ID_1] / maxCarsInState, 120 + 120 * carPerState[x.properties.ID_1] / maxCarsInState);})
     });
 }
 
-function changeCarType(s) {
+changeCarType = (s) => {
     currCarType = s;
     redrawMap();
+    redrawPie();
 	carType.filter((d) => {
 			if (currCarType == 'all')
 			return true;
@@ -510,3 +564,9 @@ function changeCarType(s) {
 			})
 	renderAllCross();
 }
+
+});
+
+var changeCarType;
+
+

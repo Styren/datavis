@@ -1,3 +1,12 @@
+
+.arc text {
+font: 10px sans-serif;
+      text-anchor: middle;
+}
+
+.arc path {
+stroke: #fff;
+}
 svg {
   font: 10px sans-serif;
 }
@@ -82,9 +91,6 @@ body {
   font-family: "Helvetica Neue";
   margin: 40px auto;
 }
-#body {
-  position: relative;
-}
 footer {
   padding: 2em 0 1em 0;
   font-size: 12px;
@@ -102,7 +108,6 @@ h2 {
   font-size: 28px;
 }
 h1, h2 {
-  font-family: "Yanone Kaffeesatz";
   text-rendering: optimizeLegibility;
 }
 #body > p {
@@ -166,9 +171,14 @@ hr {
 	margin: 0 16%; 
 	width: 100%;
 }
+#bottomStructText {
+	display: flex;
+	margin: 0 30%; 
+	width: 100%;
+}
 #bottomStruct {
 	display: flex;
-	margin: 0 15%; 
+	margin: 0 30%; 
 	width: 100%;
 }
 #leftStruct {
