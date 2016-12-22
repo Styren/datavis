@@ -1,11 +1,12 @@
+// Variables for the germany map
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
     width = 500,
     height = 500,
-    pwidth = 2000,
-    pheight = 400,
+    // wether or not a state is focused
     focused = null,
     geoPath;
 
+// the svg element for the germany map
 var svg = d3.select("#map")
 	.append("svg")
 	.attr("width", width)
@@ -36,10 +37,12 @@ var currAttr = [[0, 100000000],
 	];
 var pieData = null;
 
-// Calculates how many cars are in each state depending on current parameters aswell as 
+// Calculates how many cars are in each state depending on current parameters aswell as how many cars per manufacturer
 var calcCarPerState = () => {
+    // containing the output data of cars per state
 	carPerState = Array.apply(null, Array(NUM_STATES + 1)).map(Number.prototype.valueOf,0);
     var res = {};
+    // containing the output data for manufacturers
     pieData = [];
     maxCarsWithConfig = 0;
     if (currCarType == 'all') {
@@ -81,6 +84,7 @@ var calcCarPerState = () => {
         }
         maxCarsInState = Math.max.apply(null, carPerState);
     }
+    // All manufacturer with less than 1% cars in the market is put into others
     var cutoff = maxCarsWithConfig / 100;
     var other = 0;
     for (var key in res) {
@@ -94,15 +98,19 @@ var calcCarPerState = () => {
     pieData.push({brand: "other", value: other})
 }
 
+// Call this function to get initial data
 calcCarPerState();
 
+// current selected car type
 var carType = null;
+// forward reference for the function redrawing the crossfilter
 var renderAllCross = null;
 
 d3.json("data.json", function(error, data) {
 		var charts;
 		var cars = [];
 		var car;
+        // removes all cars not in the state
 		var filterCars = () => {
 			cars = data.filter((d) => {
 				if (!currState)
@@ -112,7 +120,7 @@ d3.json("data.json", function(error, data) {
 				});
 		};
 		filterCars();
-		var color = d3.scale.category10();
+        // Code wrapped here creates the germany map
 		d3.json("./dataBundesLander.json", function(collection) {
 			var bounds = d3.geo.bounds(collection),
 			bottomLeft = bounds[0],
@@ -137,7 +145,6 @@ d3.json("data.json", function(error, data) {
 			.rotate([rotLong,0,0])
 			.translate([width/2,height/2])
 			.scale(scaleFactor*0.975*1000)
-			//.scale(4*1000)  //1000 is default for USA map
 			.center(center);
 
 			geoPath = d3.geo.path().projection(projection);
@@ -156,7 +163,7 @@ d3.json("data.json", function(error, data) {
 			formatChange = d3.format("+,d"),
 			formatDate = d3.time.format("%B %d, %Y"),
 			formatTime = d3.time.format("%I:%M %p");
-		// A little coercion, since the CSV is untyped.
+        // cast numerical types to integers
 		cars.forEach(function(d, i) {
 				d.index = i;
 				d.price = +d.price;
@@ -238,12 +245,14 @@ d3.json("data.json", function(error, data) {
 		};
 		window.reset = function(i) {
 			charts[i].filter(null);
+            // If a chart is reset we change the filters for the other maps aswell
 			currAttr = [[0, 100000000],
 					 [0, 100000000],
 					 [0, 100000000],
 					 [0, 100000000]
 						 ];
 			redrawMap();
+            redrawPie();
 			renderAll();
 		};
 		function barChart() {
@@ -253,7 +262,6 @@ d3.json("data.json", function(error, data) {
 				y = d3.scale.linear().range([200, 0]),
 				id = barChart.id++,
 				axis = d3.svg.axis().orient("bottom"),
-				yaxis = d3.svg.axis().ticks(5).orient("right"),
 				brush = d3.svg.brush(),
 				brushDirty,
 				dimension,
@@ -263,7 +271,6 @@ d3.json("data.json", function(error, data) {
 				var width = x.range()[1],
 					height = y.range()[0];
 				y.domain([0, group.top(1)[0].value]);
-                console.log(height);
 				div.each(function() {
 						var div = d3.select(this),
 						g = div.select("g");
@@ -291,14 +298,10 @@ d3.json("data.json", function(error, data) {
 							.datum(group.all());
 						g.selectAll(".foreground.bar")
 							.attr("clip-path", "url(#clip-" + id + ")");
-                        yaxis.scale(y);
 						g.append("g")
-							.attr("class", "axis")
+							.attr("class", "x axis")
 							.attr("transform", "translate(0," + height + ")")
 							.call(axis);
-						g.append("g")
-							.attr("class", "axis")
-							.call(yaxis);
 						// Initialize the brush component with pretty resize handles.
 						var gBrush = g.append("g").attr("class", "brush").call(brush);
 						gBrush.selectAll("rect").attr("height", height);
@@ -348,10 +351,12 @@ d3.json("data.json", function(error, data) {
 						+ "V" + (2 * y - 8);
 				}
 			}
+            // when someone starts dragging a crossfilter
 			brush.on("brushstart.chart", function() {
 					var div = d3.select(this.parentNode.parentNode.parentNode);
 					div.select(".title a").style("display", null);
 					});
+            // when someone is dragging a crossfilter
 			brush.on("brush.chart", function() {
 					var g = d3.select(this.parentNode),
 					extent = brush.extent();
@@ -368,13 +373,21 @@ d3.json("data.json", function(error, data) {
 					redrawMap();
 					redrawPie();
 					});
+            // When brush is released
 			brush.on("brushend.chart", function() {
 					if (brush.empty()) {
-					var div = d3.select(this.parentNode.parentNode.parentNode);
-					div.select(".title a").style("display", "none");
-					div.select("#clip-" + id + " rect").attr("x", null).attr("width", "100%");
-					dimension.filterAll();
-					}
+                        var div = d3.select(this.parentNode.parentNode.parentNode);
+                        div.select(".title a").style("display", "none");
+                        div.select("#clip-" + id + " rect").attr("x", null).attr("width", "100%");
+                        dimension.filterAll();
+					} else {
+                        // Update other maps on this event
+                        extent = brush.extent();
+                        currAttr[id][0] = extent[0];
+                        currAttr[id][1] = extent[1];
+                        redrawMap();
+                        redrawPie();
+                    }
 					});
 			chart.margin = function(_) {
 				if (!arguments.length) return margin;
@@ -422,6 +435,7 @@ d3.json("data.json", function(error, data) {
 			return d3.rebind(chart, brush, "on");
 		}
 
+        // Whenever you click a state on the map
 		function clickPath(d) {
 			var x = width/2,
 				y = height/2,
@@ -465,6 +479,7 @@ d3.json("data.json", function(error, data) {
             redrawPie();
 		}
 
+        // whenever you click the text on a state
 		function clickText(d) {
 			currState = null;
 			focused = null;
@@ -490,8 +505,8 @@ var bwidth = 900,
     bheight = 900,
     radius = Math.min(bwidth, bheight) / 2;
 
-var color = d3.scale.category20c()
-    //.range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+// color scale for the piechart
+var color = d3.scale.category20c();
 
 var arc = d3.svg.arc()
     .outerRadius(radius - 10)
@@ -530,6 +545,7 @@ var bsvg = d3.select("#pie").append("svg")
       .attr("dy", "1.55em")
       .text(function(d) { return Math.round(100 * d.data.value / data.length) + "%"; });
 
+  // redraws the piechart
   var redrawPie = () => {
       var bsvg = d3.select("#pie");
       bsvg.selectAll(".arc").remove();
@@ -551,14 +567,16 @@ var bsvg = d3.select("#pie").append("svg")
           .text(function(d) { return Math.round(100 * d.data.value / maxCarsWithConfig) + "%"; });
   }
 
+  // Whenever we need to redraw the germany map
 var redrawMap = () => {
     calcCarPerState();
     d3.json("./dataBundesLander.json", function(collection) {
             map.selectAll("path")
-		.style("fill", (x) => {return d3.rgb(0.0, 120 * carPerState[x.properties.ID_1] / maxCarsInState, 120 + 120 * carPerState[x.properties.ID_1] / maxCarsInState);})
+            .style("fill", (x) => {return d3.rgb(0.0, 120 * carPerState[x.properties.ID_1] / maxCarsInState, 120 + 120 * carPerState[x.properties.ID_1] / maxCarsInState);})
     });
 }
 
+// called whenever a user changes the car type, updates all the other graphs accordingly
 changeCarType = (s) => {
     currCarType = s;
     redrawMap();
@@ -574,6 +592,7 @@ changeCarType = (s) => {
 
 });
 
+// forward ref of changeCarType function so we can utilize variables in other scopes
 var changeCarType;
 
 
