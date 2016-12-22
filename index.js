@@ -36,6 +36,7 @@ var currAttr = [[0, 100000000],
 	];
 var pieData = null;
 
+// Calculates how many cars are in each state depending on current parameters aswell as 
 var calcCarPerState = () => {
 	carPerState = Array.apply(null, Array(NUM_STATES + 1)).map(Number.prototype.valueOf,0);
     var res = {};
@@ -200,7 +201,7 @@ d3.json("data.json", function(error, data) {
 				.dimension(kilometer)
 				.group(kilometers)
 				.x(d3.scale.linear()
-						.domain([0, 200000])
+						.domain([0, 155000])
 						.rangeRound([0, 500])),
 			];
 		// Given our array of charts, which we assume are in the same order as the
@@ -252,6 +253,7 @@ d3.json("data.json", function(error, data) {
 				y = d3.scale.linear().range([200, 0]),
 				id = barChart.id++,
 				axis = d3.svg.axis().orient("bottom"),
+				yaxis = d3.svg.axis().ticks(5).orient("right"),
 				brush = d3.svg.brush(),
 				brushDirty,
 				dimension,
@@ -261,6 +263,7 @@ d3.json("data.json", function(error, data) {
 				var width = x.range()[1],
 					height = y.range()[0];
 				y.domain([0, group.top(1)[0].value]);
+                console.log(height);
 				div.each(function() {
 						var div = d3.select(this),
 						g = div.select("g");
@@ -288,10 +291,14 @@ d3.json("data.json", function(error, data) {
 							.datum(group.all());
 						g.selectAll(".foreground.bar")
 							.attr("clip-path", "url(#clip-" + id + ")");
+                        yaxis.scale(y);
 						g.append("g")
 							.attr("class", "axis")
 							.attr("transform", "translate(0," + height + ")")
 							.call(axis);
+						g.append("g")
+							.attr("class", "axis")
+							.call(yaxis);
 						// Initialize the brush component with pretty resize handles.
 						var gBrush = g.append("g").attr("class", "brush").call(brush);
 						gBrush.selectAll("rect").attr("height", height);
