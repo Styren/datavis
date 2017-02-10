@@ -361,7 +361,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                    if(mipMode) 
                         pixelColor= traceRayMIP(entryPoint,exitPoint,viewVec,sampleStep);
                          
-                   if(compositingMode) 
+                   if(compositingMode||tf2dMode) 
                         pixelColor= Compose(entryPoint,exitPoint,viewVec,sampleStep);
                    
                    
@@ -381,7 +381,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
     TFColor Phong(double[] viewVec,TFColor color,double[] grad,float mag)
     {
-        if (shadingMode==true){
+        if(shadingMode){
         TFColor colorPhong= new TFColor();
         double ka,kd,ks,alpha,cosTheta,cosBeta,cosPhi,phi,theta,beta;
         double[] lightSource={1,0,0};
@@ -404,10 +404,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         cosBeta=0;
         cosPhi=0;}
         else{
-        cosTheta= (grad[0]*lightSource[0]+grad[1]*lightSource[1]+grad[2]*lightSource[2])/(mag*Math.sqrt(Math.pow(lightSource[0],2)+ Math.pow(lightSource[1],2)+Math.pow(lightSource[2],2))) ;
-        cosBeta= (grad[0]*viewVec[0]+grad[1]*viewVec[1]+grad[2]*viewVec[2])/(mag*Math.sqrt(Math.pow(viewVec[0],2)+ Math.pow(viewVec[1],2)+Math.pow(viewVec[2],2))) ;
+            cosTheta=VectorMath.dotproduct(grad,lightSource)/(mag*VectorMath.length(lightSource));
+            
+       // cosTheta= (grad[0]*lightSource[0]+grad[1]*lightSource[1]+grad[2]*lightSource[2])/(mag*Math.sqrt(Math.pow(lightSource[0],2)+ Math.pow(lightSource[1],2)+Math.pow(lightSource[2],2))) ;
+        /*cosBeta= (grad[0]*viewVec[0]+grad[1]*viewVec[1]+grad[2]*viewVec[2])/(mag*Math.sqrt(Math.pow(viewVec[0],2)+ Math.pow(viewVec[1],2)+Math.pow(viewVec[2],2))) ;
            beta=Math.acos(cosBeta);
         phi=beta-Math.acos(cosTheta);
+        */
+        theta=Math.acos(cosTheta);
+        cosBeta=VectorMath.dotproduct(viewVec,lightSource)/(VectorMath.length(viewVec)*VectorMath.length(lightSource));
+            
+        //cosBeta= (lightSource[0]*viewVec[0]+lightSource[1]*viewVec[1]+lightSource[2]*viewVec[2])/(mag*Math.sqrt(Math.pow(viewVec[0],2)+ Math.pow(viewVec[1],2)+Math.pow(viewVec[2],2))) ;
+        beta=Math.acos(cosBeta);
+        phi=beta-2*theta;
         cosPhi=Math.cos(phi);}
         if(cosTheta*cosTheta>1)
         {System.out.print(cosTheta);
@@ -419,6 +428,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         kd=0.7;
         ks=0.2;
         alpha=10;
+        /*if(cosPhi>0.9)
+        {
+            System.out.print(ka*color.r);
+            System.out.print(' ');
+             System.out.print(cosTheta);
+            System.out.print(' ');
+            System.out.print(kd*color.r*cosTheta);
+            System.out.print(' ');
+            System.out.println(ks*Math.pow(cosPhi,alpha));
+        }*/
         colorPhong.r=ka*color.r+kd*color.r*cosTheta+ks*Math.pow(cosPhi,alpha);
         colorPhong.g=ka*color.g+kd*color.g*cosTheta+ks*Math.pow(cosPhi,alpha);
         colorPhong.b=ka*color.b+kd*color.b*cosTheta+ks*Math.pow(cosPhi,alpha);
@@ -446,69 +465,57 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             pixelCoord[1]=entryPoint[1]-i*sampleStep*viewVec[1];
             pixelCoord[2]=entryPoint[2]-i*sampleStep*viewVec[2];
             int val = volume.getVoxelInterpolate(pixelCoord);
-       
+             TFColor newColor = new TFColor();
             TFColor voxelColor = new TFColor();
             voxelColor = tFunc.getColor(val);
-            VoxelGradient grad = new VoxelGradient();
-            grad = gradients.getGradient(pixelCoord);
-            double posX,posY,posZ;
-            posX=grad.x;
-            posY=grad.y;
-            posZ=grad.z;
-            double[] gradD={posX,posY,posZ};
-            voxelColor=Phong(viewVec,voxelColor,gradD,grad.mag);
-            TFColor newColor = new TFColor();
+            if (shadingMode || tf2dMode){
+                VoxelGradient grad = new VoxelGradient();
+                grad = gradients.getGradient(pixelCoord);
+            
+                
+                if(tf2dMode){
+                    TFColor tf2Color=tfEditor2D.triangleWidget.color;
+                    double rad=tfEditor2D.triangleWidget.radius;
+                    double fv=tfEditor2D.triangleWidget.baseIntensity;
+                    voxelColor.r=tf2Color.r;
+                    voxelColor.g=tf2Color.g;
+                    voxelColor.b=tf2Color.b;
+                    if(val==fv && grad.mag==0){
+                        voxelColor.a=1;
+                    }
+                    else if(grad.mag>0 && fv >= val-rad*grad.mag && fv <= val+rad*grad.mag){
+                
+                        voxelColor.a=1-1/rad*Math.abs((fv-val)/(grad.mag));
+                
+                    }
+                    else{
+                        voxelColor.a=0;
+                    } 
+                }
+                if(shadingMode){
+                    double posX,posY,posZ;
+                    posX=grad.x;
+                    posY=grad.y;
+                    posZ=grad.z;
+                    double[] gradD={posX,posY,posZ};
+                    voxelColor=Phong(viewVec,voxelColor,gradD,grad.mag);
+                }
+                
+            }
+          
             double alpha= (1-Math.pow(1-voxelColor.a, sampleStep));
             newColor.r=prevColor.r+(1-prevColor.a)*voxelColor.r*alpha;
             newColor.g=prevColor.g+(1-prevColor.a)*voxelColor.g*alpha;
             newColor.b=prevColor.b+(1-prevColor.a)*voxelColor.b*alpha;
             newColor.a=prevColor.a+(1-prevColor.a)*alpha;
-            /*
-            newColor.r=(voxelColor.a)*voxelColor.r+(1-voxelColor.a)*prevColor.r*prevColor.a;
-            newColor.g=(voxelColor.a)*voxelColor.g+(1-voxelColor.a)*prevColor.g*prevColor.a;
-            newColor.b=(voxelColor.a)*voxelColor.b+(1-voxelColor.a)*prevColor.b*prevColor.a;
-            */
-            /*
-            newColor.r=voxelColor.r+(1-voxelColor.a)*prevColor.r;
-            newColor.g=voxelColor.g+(1-voxelColor.a)*prevColor.g;
-            newColor.b=voxelColor.b+(1-voxelColor.a)*prevColor.b;
-            newColor.a=voxelColor.a+(1-voxelColor.a)*prevColor.a;*/
-            /*newColor.r=prevColor.a*prevColor.r+(1-prevColor.a)*voxelColor.r*voxelColor.a;
-            newColor.g=prevColor.a*prevColor.g+(1-prevColor.a)*voxelColor.g*voxelColor.a;
-            newColor.b=prevColor.a*prevColor.b+(1-prevColor.a)*voxelColor.b*voxelColor.a;
-            newColor.a=prevColor.a+(1-prevColor.a)*voxelColor.a;
-            */
-            /*newColor.r=voxelColor.r+(1-voxelColor.a)*prevColor.r;
-            newColor.g=voxelColor.g+(1-voxelColor.a)*prevColor.g;
-            newColor.b=voxelColor.b+(1-voxelColor.a)*prevColor.b;*/
            
-            //integral= integral+(val+previous)/2 * sampleStep;
-            //newColor.a=voxelColor.a+(1-voxelColor.a)*prevColor.a;
             if (newColor.a>1)
             { 
                 newColor.a=1;
             }
             prevColor=newColor;
-            /*VoxelGradient grad = new VoxelGradient();
-            grad = gradients.getGradient(pixelCoord);
-            double posX,posY,posZ;
-            posX=grad.x;
-            posY=grad.y;
-            posZ=grad.z;
-            double[] gradD={posX,posY,posZ};
-            prevColor=Phong(viewVec,prevColor,gradD,grad.mag);*/
+            
         }
-        
-        /*if(prevColor.a<0.999){
-            System.out.println(prevColor.a);}
-        */
-        //System.out.println(integral);
-       /*int res=(int) (entryVal* Math.exp(-integral));
-        int fill=255;
-        if (res==0)
-        {
-            fill=0;
-        }*/
         
         int r= (int) (prevColor.r *255);
         if (r>255) r=255;
