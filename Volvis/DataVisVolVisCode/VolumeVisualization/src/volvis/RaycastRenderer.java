@@ -382,71 +382,51 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     TFColor Phong(double[] viewVec,TFColor color,double[] grad,float mag)
     {
         if(shadingMode){
-        TFColor colorPhong= new TFColor();
-        double ka,kd,ks,alpha,cosTheta,cosBeta,cosPhi,phi,theta,beta;
-        double[] lightSource={1,0,0};
-        /*System.out.print(grad[0]);
-        System.out.print(',');
-        System.out.print(grad[1]);
-        System.out.print(',');
-        System.out.print(grad[2]);
-        System.out.print('+');
-        System.out.println(mag);
-        System.out.print(lightSource[0]);
-        System.out.print(',');
-        System.out.print(lightSource[1]);
-        System.out.print(',');
-        System.out.print(lightSource[2]);
-         System.out.print('+');
-        System.out.println(mag*Math.sqrt(Math.pow(lightSource[0],2)+ Math.pow(lightSource[1],2)+Math.pow(lightSource[2],2)));
-        */if(mag==0)
-        {cosTheta=0;
-        cosBeta=0;
-        cosPhi=0;}
-        else{
-            cosTheta=VectorMath.dotproduct(grad,lightSource)/(mag*VectorMath.length(lightSource));
+            TFColor colorPhong= new TFColor();
+            double ka,kd,ks,alpha,cosTheta,cosBeta,cosPhi,phi,theta,beta;
+            double[] lightSource={1,0,0};
+            if(mag==0){
+                cosTheta=0;
+                cosBeta=0;
+                cosPhi=0;}
+            else{
+                double norm[]=new double[3];
+                double reflection[]=new double[3];
+                VectorMath.setVector(norm, grad[0]/mag, grad[1]/mag, grad[2]/mag);
+                double temp=VectorMath.dotproduct(lightSource,norm);
+                for(int incr=0;incr<3;incr++)
+                {
+                    reflection[incr]=lightSource[incr]-2*temp*norm[incr];
+                }
+                cosTheta=VectorMath.dotproduct(grad,lightSource)/(mag*VectorMath.length(lightSource));
             
-       // cosTheta= (grad[0]*lightSource[0]+grad[1]*lightSource[1]+grad[2]*lightSource[2])/(mag*Math.sqrt(Math.pow(lightSource[0],2)+ Math.pow(lightSource[1],2)+Math.pow(lightSource[2],2))) ;
-        /*cosBeta= (grad[0]*viewVec[0]+grad[1]*viewVec[1]+grad[2]*viewVec[2])/(mag*Math.sqrt(Math.pow(viewVec[0],2)+ Math.pow(viewVec[1],2)+Math.pow(viewVec[2],2))) ;
-           beta=Math.acos(cosBeta);
-        phi=beta-Math.acos(cosTheta);
-        */
-        theta=Math.acos(cosTheta);
-        cosBeta=VectorMath.dotproduct(viewVec,lightSource)/(VectorMath.length(viewVec)*VectorMath.length(lightSource));
-            
-        //cosBeta= (lightSource[0]*viewVec[0]+lightSource[1]*viewVec[1]+lightSource[2]*viewVec[2])/(mag*Math.sqrt(Math.pow(viewVec[0],2)+ Math.pow(viewVec[1],2)+Math.pow(viewVec[2],2))) ;
-        beta=Math.acos(cosBeta);
-        phi=beta-2*theta;
-        cosPhi=Math.cos(phi);}
-        if(cosTheta*cosTheta>1)
-        {System.out.print(cosTheta);
-        System.out.print(' ');
-        System.out.println(cosPhi);
-        System.out.println(' ');
-        System.out.println(' ');}
-        ka=0.1;
-        kd=0.7;
-        ks=0.2;
-        alpha=10;
-        /*if(cosPhi>0.9)
-        {
-            System.out.print(ka*color.r);
+                cosPhi=VectorMath.dotproduct(viewVec,reflection)/(VectorMath.length(viewVec)*VectorMath.length(reflection));
+            }
+     
+            ka=0.1;
+            kd=0.7;
+            ks=0.2;
+            alpha=10;
+           
+            colorPhong.r=ka*color.r+kd*color.r*cosTheta+ks*Math.pow(cosPhi,alpha);
+            colorPhong.g=ka*color.g+kd*color.g*cosTheta+ks*Math.pow(cosPhi,alpha);
+            colorPhong.b=ka*color.b+kd*color.b*cosTheta+ks*Math.pow(cosPhi,alpha);
+            colorPhong.a=color.a;
+            if (colorPhong.g>0.9 ||colorPhong.r>0.9 || colorPhong.b>0.9)
+            {
+            System.out.print(color.g);
             System.out.print(' ');
-             System.out.print(cosTheta);
+            System.out.print(cosTheta);
             System.out.print(' ');
-            System.out.print(kd*color.r*cosTheta);
-            System.out.print(' ');
-            System.out.println(ks*Math.pow(cosPhi,alpha));
-        }*/
-        colorPhong.r=ka*color.r+kd*color.r*cosTheta+ks*Math.pow(cosPhi,alpha);
-        colorPhong.g=ka*color.g+kd*color.g*cosTheta+ks*Math.pow(cosPhi,alpha);
-        colorPhong.b=ka*color.b+kd*color.b*cosTheta+ks*Math.pow(cosPhi,alpha);
-        colorPhong.a=color.a;
-        return colorPhong;
+            System.out.println(colorPhong.g);
+            }
+            return colorPhong;
+            }   
         
+        
+        else{
+            return color;
         }
-        else
-        {return color;}
     }
     int Compose(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
         double length=Math.sqrt(Math.pow((entryPoint[0]-exitPoint[0]),2) + Math.pow((entryPoint[1]-exitPoint[1]),2)+Math.pow((entryPoint[2]-exitPoint[2]),2));
@@ -519,12 +499,17 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         int r= (int) (prevColor.r *255);
         if (r>255) r=255;
+        if (r<0) r=0;
         int g= (int) (prevColor.g *255);
         if (g>255) g=255;
+        if (g<0) g=0;
         int b= (int) (prevColor.b *255);
         if (b>255) b=255;
+        if (b<0) b=0;
         int a= (int) (prevColor.a *255);
         if (a>255) a=255;
+        if (a<0) a=0;
+        
        /* System.out.print(r+",");
         System.out.print(g+",");
         System.out.print(b+",");
