@@ -30,6 +30,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     private Volume volume = null;
     private GradientVolume gradients = null;
+    private GradientVolume gradients2nd = null;
     RaycastRendererPanel panel;
     TransferFunction tFunc;
     TransferFunctionEditor tfEditor;
@@ -51,7 +52,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         System.out.println("Computing gradients");
         gradients = new GradientVolume(vol);
-
         // set up image for storing the resulting rendering
         // the image width and height are equal to the length of the volume diagonal
         int imageSize = (int) Math.floor(Math.sqrt(vol.getDimX() * vol.getDimX() + vol.getDimY() * vol.getDimY()
@@ -477,6 +477,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     else{
                         voxelColor.a=0;
                     } 
+                    voxelColor.a=voxelColor.a*tf2Color.a; // Take tf2Color.a out for more visible results
                 }
                 if(shadingMode){
                     double posX,posY,posZ;
