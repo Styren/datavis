@@ -25,7 +25,9 @@ public abstract class Renderer {
     public void setInteractiveMode(boolean flag) {
         interactiveMode = flag;
     }
-    
+        public boolean getInteractiveMode(){
+    return interactiveMode;
+    }
     public void setWinWidth(int w) {
         winWidth = w;
     }

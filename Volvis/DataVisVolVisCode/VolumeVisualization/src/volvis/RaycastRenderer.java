@@ -330,7 +330,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] exitPoint = new double[3];
         
         int increment=1;
-        float sampleStep=0.2f;//0.2f;
+         float sampleStep;
+        if (this.getInteractiveMode()==true){
+        sampleStep=10f;}//0.2f;
+        else
+        {sampleStep=0.2f
+                ;}
         
 
 
@@ -342,8 +347,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
 
         for (int j = 0; j < image.getHeight(); j += increment) {
-            for (int i = 0; i < image.getWidth(); i += increment) {
+            for (int i = 0; i < image.getWidth() ; i += increment) {
                 // compute starting points of rays in a plane shifted backwards to a position behind the data set
+                
                 pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter) - viewVec[0] * imageCenter
                         + volume.getDimX() / 2.0;
                 pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter) - viewVec[1] * imageCenter
