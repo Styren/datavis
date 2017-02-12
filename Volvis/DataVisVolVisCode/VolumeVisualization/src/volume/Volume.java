@@ -72,7 +72,8 @@ public class Volume {
         int[] pointsZ={zFloor, zCeil , zFloor,zCeil ,zFloor,zCeil,zFloor,zCeil };
         double[] interPolZ=new double[4];
         double[] interPolY=new double[2];
-        //sart to interpolate folowing Z axis
+        //sart to interpolate folowing Z axis 
+        // /!\ we interpolate between points[0] and points[1] then between points[2] and points[3] etc...
         for (int i=0;i<4;i++)
         {
             // is we are exactly on a known voxel we just get its value
@@ -111,6 +112,9 @@ public class Volume {
     
     public short getVoxel(int i) {
         return data[i];
+    }
+     public void setVoxel(short[] values) {
+        data = values;
     }
     
     public int getDimX() {

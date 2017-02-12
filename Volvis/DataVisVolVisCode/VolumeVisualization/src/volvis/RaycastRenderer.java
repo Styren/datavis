@@ -29,6 +29,10 @@ import volume.VoxelGradient;
 public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     private Volume volume = null;
+    private GradientVolume gradients2x = null;
+    private GradientVolume gradients2y = null;
+    private GradientVolume gradients2z = null;
+    private double max2ndGrad=0.0;
     private GradientVolume gradients = null;
     private GradientVolume gradients2nd = null;
     RaycastRendererPanel panel;
@@ -41,6 +45,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private boolean tf2dMode = false;
     private boolean shadingMode = false;
     
+    /* VARIABLES TO CHANGE FOR KNISS MODEL*/
+    //////////////////////////////////////////////////////////////
+    private boolean grad2nd=false;// do we want kniss model
+    private double fractionGrad2nd=0.8;
+    //////////////////////////////////////////////////////////////
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
         panel.setSpeedLabel("0");
@@ -52,6 +61,27 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         System.out.println("Computing gradients");
         gradients = new GradientVolume(vol);
+        // if Kniss model is chosen
+        if(grad2nd){
+            //We want to re-use the gradientVolume Object so we set the different axis of the gradient 
+            //in seperate vlume objects to be able to use it
+        Volume gradX = new Volume(volume.getDimX(),volume.getDimY(),gradients.getDimZ());
+        Volume gradY = new Volume(volume.getDimX(),volume.getDimY(),gradients.getDimZ());
+        Volume gradZ = new Volume(volume.getDimX(),volume.getDimY(),gradients.getDimZ());
+        for(int i=0;i<volume.getDimX()*volume.getDimY()*volume.getDimZ();i++){
+            gradX.setVoxel(i,(short)gradients.getVoxel(i).x);
+            gradY.setVoxel(i,(short)gradients.getVoxel(i).y);
+            gradZ.setVoxel(i,(short)gradients.getVoxel(i).z);   
+        }
+        gradients2x = new GradientVolume(gradX);
+        gradients2y = new GradientVolume(gradY);
+        gradients2z = new GradientVolume(gradZ);
+        /*Get the maximum magnitude of each 2nd derivative to be able to compute a fraction later*/
+        double maxX=gradients2x.getMaxGradientMagnitude();
+        double maxY=gradients2y.getMaxGradientMagnitude();
+        double maxZ=gradients2z.getMaxGradientMagnitude();
+        max2ndGrad=Math.sqrt(maxX*maxX+maxY*maxY+maxZ*maxZ);
+        }
         // set up image for storing the resulting rendering
         // the image width and height are equal to the length of the volume diagonal
         int imageSize = (int) Math.floor(Math.sqrt(vol.getDimX() * vol.getDimX() + vol.getDimY() * vol.getDimY()
@@ -429,10 +459,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
     /*Funtion that does the ray composting*/
     int Compose(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
+        //compute lenght of the viewing vector and the numeber of steps to be computed
         double length=Math.sqrt(Math.pow((entryPoint[0]-exitPoint[0]),2) + Math.pow((entryPoint[1]-exitPoint[1]),2)+Math.pow((entryPoint[2]-exitPoint[2]),2));
         double nbrSteps=length/sampleStep;
+        //initialse the first previous colour
         TFColor prevColor = new TFColor(); 
-        int entryVal=volume.getVoxelInterpolate(entryPoint);
         prevColor.r=0;
         prevColor.g=0;
         prevColor.b=0;
@@ -447,13 +478,14 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             int val = volume.getVoxelInterpolate(pixelCoord);
             TFColor newColor = new TFColor();
             TFColor voxelColor = new TFColor();
+            
             voxelColor = tFunc.getColor(val); // color at the chosen point using the transfer function
             if (shadingMode || tf2dMode){
                 VoxelGradient grad = new VoxelGradient();
                 grad = gradients.getGradient(pixelCoord);// gradinet needed for shading and 2D transfer funcion
                
                 if(tf2dMode){
-                    /* Get values from widge */
+                    /* Get values from widget */
                     TFColor tf2Color=tfEditor2D.triangleWidget.color;
                     double rad=tfEditor2D.triangleWidget.radius;
                     double fv=tfEditor2D.triangleWidget.baseIntensity;
@@ -474,7 +506,17 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     else{
                         voxelColor.a=0;
                     } 
-                    voxelColor.a=voxelColor.a;//*tf2Color.a; // Take tf2Color.a out for more visible results
+                    //voxelColor.a=voxelColor.a*tf2Color.a;// Uncoment line to take the real intensity
+                
+                    // Kniss model
+                    if(grad2nd&&voxelColor.a>0)
+                    {
+                        double magX=gradients2x.getGradient(pixelCoord).mag;
+                        double magY=gradients2y.getGradient(pixelCoord).mag;
+                        double magZ=gradients2z.getGradient(pixelCoord).mag;
+                        
+                        voxelColor.a=voxelColor.a*(1-fractionGrad2nd)+fractionGrad2nd*(Math.sqrt(magX*magX+magY*magY+magZ*magZ))/max2ndGrad;
+                    }
                 }
                 if(shadingMode){
                     double posX,posY,posZ;
@@ -504,12 +546,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int r= (int) (prevColor.r *255);
         if (r>255) r=255;
         if (r<0) r=0;
+        
         int g= (int) (prevColor.g *255);
         if (g>255) g=255;
         if (g<0) g=0;
+        
         int b= (int) (prevColor.b *255);
         if (b>255) b=255;
         if (b<0) b=0;
+        
         int a= (int) (prevColor.a *255);
         if (a>255) a=255;
         if (a<0) a=0;

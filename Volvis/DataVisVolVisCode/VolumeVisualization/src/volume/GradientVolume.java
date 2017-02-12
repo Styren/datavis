@@ -150,13 +150,13 @@ public class GradientVolume {
         for(int x=0;x<dimX;x++){
             for(int y=0;y<dimY;y++){
                 for(int z=0;z<dimZ;z++){
-                   // get voxels around current one
+                   // get voxels before and after current one
                    int xPlus=x+1;
                    int xMinus=x-1;
                    // set distance between these voxels
                    int deltaX=2;
                    
-                   /*if voxels on the boundary estimate that the gradient to be
+                   /*if voxels on the boundary estimate that the gradient to be equal to
                    the the gradient between the current point and the the other slected voxel*/
                    if(xPlus==dimX)
                    {xPlus=x;
@@ -166,6 +166,7 @@ public class GradientVolume {
                    {xMinus=0;
                    deltaX=1;}
                    
+                   //repeat for y and z
                    int yPlus=y+1;
                    int yMinus=y-1;
                    int deltaY=2;
