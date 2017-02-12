@@ -241,8 +241,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
       int traceRayMIP(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
        
-          /* to be implemented:  You need to sample the ray and implement the MIP
-         * right now it just returns yellow as a color
+          /* Finds the maximum voxel value by going through all the voxels following the viewVec
         */
         double max=-10000.0;
         double length=Math.sqrt(Math.pow((entryPoint[0]-exitPoint[0]),2) + Math.pow((entryPoint[1]-exitPoint[1]),2)+Math.pow((entryPoint[2]-exitPoint[2]),2));
@@ -330,12 +329,13 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] exitPoint = new double[3];
         
         int increment=1;
-         float sampleStep;
+        
+        /*Make application more interactible by having a very big step size when the user interacts with it*/
+        float sampleStep;
         if (this.getInteractiveMode()==true){
-        sampleStep=10f;}//0.2f;
+        sampleStep=10f;}
         else
-        {sampleStep=0.2f
-                ;}
+        {sampleStep=0.2f;}
         
 
 
@@ -359,8 +359,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
                 computeEntryAndExit(pixelCoord, viewVec, entryPoint, exitPoint);
                 if ((entryPoint[0] > -1.0) && (exitPoint[0] > -1.0)) {
-                    //System.out.println("Entry: " + entryPoint[0] + " " + entryPoint[1] + " " + entryPoint[2]);
-                    //System.out.println("Exit: " + exitPoint[0] + " " + exitPoint[1] + " " + exitPoint[2]);
                     int pixelColor = 0;
                                    
                     /* set color to green if MipMode- see slicer function*/
@@ -387,28 +385,30 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
     TFColor Phong(double[] viewVec,TFColor color,double[] grad,float mag)
     {
+        /*Phong shading model*/
         if(shadingMode){
             TFColor colorPhong= new TFColor();
-            double ka,kd,ks,alpha,cosTheta,cosBeta,cosPhi,phi,theta,beta;
-            double[] lightSource={1,0,0};
-            if(mag==0){
+            double ka,kd,ks,alpha,cosTheta,cosPhi;
+            double[] lightSource={1,0,0}; // We set an arbitrary vector as light source
+            if(mag==0){//If the gradient is null then dont take shading into acount 
                 cosTheta=0;
-                cosBeta=0;
                 cosPhi=0;}
             else{
                 double norm[]=new double[3];
                 double reflection[]=new double[3];
-                VectorMath.setVector(norm, grad[0]/mag, grad[1]/mag, grad[2]/mag);
-                double temp=VectorMath.dotproduct(lightSource,norm);
+                VectorMath.setVector(norm, grad[0]/mag, grad[1]/mag, grad[2]/mag);//normalize gradient
+                double temp=VectorMath.dotproduct(lightSource,norm); // temporary vector needed to compute reflection of the light source
                 for(int incr=0;incr<3;incr++)
                 {
-                    reflection[incr]=lightSource[incr]-2*temp*norm[incr];
+                    reflection[incr]=lightSource[incr]-2*temp*norm[incr];// computation of the reflection
                 }
+                
+                /*Find the cosinus of angles using the dot product method*/
                 cosTheta=VectorMath.dotproduct(grad,lightSource)/(mag*VectorMath.length(lightSource));
             
                 cosPhi=VectorMath.dotproduct(viewVec,reflection)/(VectorMath.length(viewVec)*VectorMath.length(reflection));
             }
-     
+            //Set values
             ka=0.1;
             kd=0.7;
             ks=0.2;
@@ -418,14 +418,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             colorPhong.g=ka*color.g+kd*color.g*cosTheta+ks*Math.pow(cosPhi,alpha);
             colorPhong.b=ka*color.b+kd*color.b*cosTheta+ks*Math.pow(cosPhi,alpha);
             colorPhong.a=color.a;
-            if (colorPhong.g>0.9 ||colorPhong.r>0.9 || colorPhong.b>0.9)
-            {
-            System.out.print(color.g);
-            System.out.print(' ');
-            System.out.print(cosTheta);
-            System.out.print(' ');
-            System.out.println(colorPhong.g);
-            }
+           
             return colorPhong;
             }   
         
@@ -434,6 +427,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             return color;
         }
     }
+    /*Funtion that does the ray composting*/
     int Compose(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
         double length=Math.sqrt(Math.pow((entryPoint[0]-exitPoint[0]),2) + Math.pow((entryPoint[1]-exitPoint[1]),2)+Math.pow((entryPoint[2]-exitPoint[2]),2));
         double nbrSteps=length/sampleStep;
@@ -451,21 +445,24 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             pixelCoord[1]=entryPoint[1]-i*sampleStep*viewVec[1];
             pixelCoord[2]=entryPoint[2]-i*sampleStep*viewVec[2];
             int val = volume.getVoxelInterpolate(pixelCoord);
-             TFColor newColor = new TFColor();
+            TFColor newColor = new TFColor();
             TFColor voxelColor = new TFColor();
-            voxelColor = tFunc.getColor(val);
+            voxelColor = tFunc.getColor(val); // color at the chosen point using the transfer function
             if (shadingMode || tf2dMode){
                 VoxelGradient grad = new VoxelGradient();
-                grad = gradients.getGradient(pixelCoord);
-            
-                
+                grad = gradients.getGradient(pixelCoord);// gradinet needed for shading and 2D transfer funcion
+               
                 if(tf2dMode){
+                    /* Get values from widge */
                     TFColor tf2Color=tfEditor2D.triangleWidget.color;
                     double rad=tfEditor2D.triangleWidget.radius;
                     double fv=tfEditor2D.triangleWidget.baseIntensity;
+                    /*Set values*/
                     voxelColor.r=tf2Color.r;
                     voxelColor.g=tf2Color.g;
                     voxelColor.b=tf2Color.b;
+                    
+                    /* Levoy's method */
                     if(val==fv && grad.mag==0){
                         voxelColor.a=1;
                     }
@@ -477,7 +474,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     else{
                         voxelColor.a=0;
                     } 
-                    voxelColor.a=voxelColor.a*tf2Color.a; // Take tf2Color.a out for more visible results
+                    voxelColor.a=voxelColor.a;//*tf2Color.a; // Take tf2Color.a out for more visible results
                 }
                 if(shadingMode){
                     double posX,posY,posZ;
@@ -489,7 +486,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 }
                 
             }
-          
+            /* Ray Compositing */
             double alpha= (1-Math.pow(1-voxelColor.a, sampleStep));
             newColor.r=prevColor.r+(1-prevColor.a)*voxelColor.r*alpha;
             newColor.g=prevColor.g+(1-prevColor.a)*voxelColor.g*alpha;
@@ -517,10 +514,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         if (a>255) a=255;
         if (a<0) a=0;
         
-       /* System.out.print(r+",");
-        System.out.print(g+",");
-        System.out.print(b+",");
-        System.out.println(a);*/
         int color= (a<< 24) | (r<<16) | (g<< 8) | (b) ;
         return color;
     

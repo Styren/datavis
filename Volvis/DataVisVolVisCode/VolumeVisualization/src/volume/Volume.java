@@ -66,18 +66,21 @@ public class Volume {
         int yCeil = (int) Math.ceil(coord[1]);
         int zFloor =(int) Math.floor(coord[2]);
         int zCeil = (int) Math.ceil(coord[2]);
-        /* notice that in this framework we assume that the distance between neighbouring voxels is 1 in all directions*/
+        /* set coordinates of points ordred to intepolate following z axis first then y axis then x axis*/
         int[] pointsX={xFloor, xFloor, xFloor,xFloor,xCeil ,xCeil,xCeil  ,xCeil };
         int[] pointsY={yFloor, yFloor, yCeil ,yCeil ,yFloor ,yFloor,yCeil ,yCeil};
         int[] pointsZ={zFloor, zCeil , zFloor,zCeil ,zFloor,zCeil,zFloor,zCeil };
         double[] interPolZ=new double[4];
-        double[] interPolY=new double[4];
+        double[] interPolY=new double[2];
+        //sart to interpolate folowing Z axis
         for (int i=0;i<4;i++)
         {
+            // is we are exactly on a known voxel we just get its value
             if (zCeil==zFloor){
                 interPolZ[i]=getVoxel(pointsX[2*i],pointsY[2*i],pointsZ[2*i]);
             }
             else{
+                // simple interpolation following z axis
                 interPolZ[i] = (zCeil-coord[2])*getVoxel(pointsX[2*i],pointsY[2*i],pointsZ[2*i]) + (coord[2]-zFloor)*getVoxel(pointsX[2*i+1],pointsY[2*i+1],pointsZ[2*i+1]) ;
             }
         }
@@ -88,6 +91,7 @@ public class Volume {
                 interPolY[i]=interPolZ[2*i];
             }
             else{
+                // simple interpolation following y axis
                 interPolY[i] =(yCeil-coord[1])*interPolZ[2*i]+(coord[1]-yFloor)*interPolZ[2*i+1];
             }   
         }
@@ -98,6 +102,7 @@ public class Volume {
                 interPolX=interPolY[0];
             }
          else{
+             // simple interpolation following x axis
                 interPolX=(xCeil-coord[0])*interPolY[0]+(coord[0]-xFloor)*interPolY[1];
             }
         
